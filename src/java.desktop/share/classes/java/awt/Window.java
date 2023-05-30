@@ -392,6 +392,8 @@ public class Window extends Container implements Accessible {
     @SuppressWarnings("serial") // Not statically typed as Serializable
     private Shape shape = null;
 
+    private Component popupTarget = null;
+
     private static final String base = "win";
     private static int nameCounter = 0;
 
@@ -4404,6 +4406,14 @@ public class Window extends Container implements Accessible {
 
             public boolean needUpdateWindow(Window window) {
                 return window != null && (isWLToolkit || !window.isOpaque());
+            }
+
+            public void setPopupTarget(Window window, Component component) {
+                window.popupTarget = component;
+            }
+
+            public Component getPopupTarget(Window window) {
+                return window.popupTarget;
             }
 
             public void setSecurityWarningSize(Window window, int width, int height)

@@ -105,6 +105,11 @@ public final class ToolTipManager extends MouseAdapter implements MouseMotionLis
 
         postTip = KeyStroke.getKeyStroke(KeyEvent.VK_F1, InputEvent.CTRL_MASK);
         hideTip =  KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0);
+
+        final Toolkit toolkit = Toolkit.getDefaultToolkit();
+        if (toolkit != null && "sun.awt.wl.WLToolkit".equals(toolkit.getClass().getName())) {
+            lightWeightPopupEnabled = false;
+        }
     }
 
     /**

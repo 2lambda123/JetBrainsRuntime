@@ -242,6 +242,11 @@ public class PopupFactory {
      */
     private int getPopupType(Component owner, Component contents,
                              int ownerX, int ownerY) {
+        final Toolkit toolkit = Toolkit.getDefaultToolkit();
+        if (toolkit != null && "sun.awt.wl.WLToolkit".equals(toolkit.getClass().getName())) {
+            return HEAVY_WEIGHT_POPUP;
+        }
+
         int popupType = getPopupType();
 
         if (owner == null || invokerInHeavyWeightPopup(owner)) {
