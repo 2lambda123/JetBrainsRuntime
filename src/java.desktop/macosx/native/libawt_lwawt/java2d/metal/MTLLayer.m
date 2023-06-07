@@ -275,6 +275,12 @@ Java_sun_java2d_metal_MTLLayer_validate
         layer.ctx = ((MTLSDOps *)bmtlsdo->privOps)->configInfo->context;
         layer.device = layer.ctx.device;
         layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+
+        if (layer.colorspace != nil) {
+            // disable color matching:
+            layer.colorspace = nil;
+        }
+
         layer.drawableSize =
             CGSizeMake((*layer.buffer).width,
                        (*layer.buffer).height);
