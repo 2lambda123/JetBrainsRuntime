@@ -35,7 +35,7 @@ import sun.awt.image.SunVolatileImage;
 import sun.java2d.SunGraphics2D;
 import sun.java2d.SurfaceData;
 import sun.java2d.pipe.Region;
-import sun.java2d.wl.WLSurfaceData;
+import sun.java2d.wl.WLSurfaceDataExt;
 import sun.util.logging.PlatformLogger;
 import sun.util.logging.PlatformLogger.Level;
 
@@ -90,7 +90,7 @@ public class WLComponentPeer implements ComponentPeer,
     protected final java.util.List<WLGraphicsDevice> devices = new ArrayList<>();
 
     protected Color background;
-    WLSurfaceData surfaceData;
+    SurfaceData surfaceData;
     WLRepaintArea paintArea;
     boolean paintPending = false;
     boolean isLayouting = false;
@@ -120,7 +120,7 @@ public class WLComponentPeer implements ComponentPeer,
         width = bounds.width;
         height = bounds.height;
         wlBufferScale = ((WLGraphicsConfig)target.getGraphicsConfiguration()).getScale();
-        this.surfaceData = (WLSurfaceData) ((WLGraphicsConfig)target.getGraphicsConfiguration())
+        this.surfaceData = ((WLGraphicsConfig)target.getGraphicsConfiguration())
                 .createSurfaceData(this);
         this.nativePtr = nativeCreateFrame();
         paintArea = new WLRepaintArea();
@@ -240,7 +240,7 @@ public class WLComponentPeer implements ComponentPeer,
         } else {
             performLocked(() -> {
                 WLToolkit.unregisterWLSurface(getWLSurface(nativePtr));
-                surfaceData.assignSurface(0);
+                SurfaceData.convertTo(WLSurfaceDataExt.class, surfaceData).assignSurface(0);
                 nativeHideFrame(nativePtr);
             });
         }
@@ -248,7 +248,8 @@ public class WLComponentPeer implements ComponentPeer,
 
     void configureWLSurface() {
         synchronized (sizeLock) {
-            surfaceData.revalidate(getBufferWidth(), getBufferHeight());
+            SurfaceData.convertTo(WLSurfaceDataExt.class, surfaceData).revalidate(
+                    getBufferWidth(), getBufferHeight());
             performLocked(() -> nativeSetBufferScale(nativePtr, wlBufferScale));
         }
     }
@@ -310,7 +311,7 @@ public class WLComponentPeer implements ComponentPeer,
     public void commitToServer() {
         performLocked(() -> {
             if (getWLSurface(nativePtr) != 0) {
-                surfaceData.commitToServer();
+                surfaceData.flush();
             }
         });
     }
@@ -340,7 +341,8 @@ public class WLComponentPeer implements ComponentPeer,
             if (sizeChanged) {
                 this.width = width;
                 this.height = height;
-                surfaceData.revalidate(getBufferWidth(), getBufferHeight());
+                SurfaceData.convertTo(WLSurfaceDataExt.class, surfaceData).revalidate(
+                        getBufferWidth(), getBufferHeight());
                 updateWindowGeometry();
                 layout();
 
@@ -927,7 +929,7 @@ public class WLComponentPeer implements ComponentPeer,
     void notifyConfigured(int newWidth, int newHeight, boolean active, boolean maximized) {
         final long wlSurfacePtr = getWLSurface(nativePtr);
         // TODO: this needs to be done only once after wlSetVisible(true)
-        surfaceData.assignSurface(wlSurfacePtr);
+        SurfaceData.convertTo(WLSurfaceDataExt.class, surfaceData).assignSurface(wlSurfacePtr);
         if (newWidth != 0 && newHeight != 0) performUnlocked(() ->target.setSize(newWidth, newHeight));
         if (newWidth == 0 && newHeight == 0) {
             // From xdg-shell.xml: "If the width or height arguments are zero,
@@ -994,7 +996,8 @@ public class WLComponentPeer implements ComponentPeer,
         synchronized (sizeLock) {
             if (newScale != wlBufferScale) {
                 wlBufferScale = newScale;
-                surfaceData.revalidate(getBufferWidth(), getBufferHeight());
+                SurfaceData.convertTo(WLSurfaceDataExt.class, surfaceData).revalidate(
+                        getBufferWidth(), getBufferHeight());
                 performLocked(() -> nativeSetBufferScale(nativePtr, wlBufferScale));
                 postPaintEvent();
             }

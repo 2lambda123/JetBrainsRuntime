@@ -29,25 +29,39 @@ package sun.java2d.vulkan;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
-import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.image.ColorModel;
 import sun.awt.wl.WLComponentPeer;
 import sun.java2d.SurfaceData;
+import sun.java2d.loops.SurfaceType;
 import sun.java2d.pipe.BufferedContext;
 import sun.java2d.wl.WLSurfaceData;
+import sun.java2d.wl.WLSurfaceDataExt;
+import sun.util.logging.PlatformLogger;
 
-public abstract class WLVKSurfaceData extends VKSurfaceData {
+public abstract class WLVKSurfaceData extends VKSurfaceData implements WLSurfaceDataExt {
+    private static final PlatformLogger log = PlatformLogger.getLogger("sun.java2d.vulkan.WLVKSurfaceData");
 
     protected WLComponentPeer peer;
     protected WLVKGraphicsConfig graphicsConfig;
+    private native void initOps(WLVKGraphicsConfig gc, WLComponentPeer peer);
 
+    @Override
+    public native void assignSurface(long surfacePtr);
+    @Override
+    public native void revalidate(int width, int height);
+
+    protected native void initOps(int width, int height, int backgroundRGB);
     protected WLVKSurfaceData(WLComponentPeer peer, WLVKGraphicsConfig gc,
-                              ColorModel cm, int type)
+                              SurfaceType sType, ColorModel cm, int type)
     {
         super(gc, cm, type, 0, 0);
         this.peer = peer;
         this.graphicsConfig = gc;
+        final int backgroundRGB = peer.getBackground() != null
+                ? peer.getBackground().getRGB()
+                : 0;
+        initOps(peer.getBufferWidth(), peer.getBufferHeight(), backgroundRGB);
     }
 
     @Override
@@ -60,31 +74,11 @@ public abstract class WLVKSurfaceData extends VKSurfaceData {
     }
 
     /**
-     * Creates a SurfaceData object representing the back buffer of a
-     * double-buffered on-screen Window.
+     * Creates a SurfaceData object representing surface of on-screen Window.
      */
-    public static WLVKOffScreenSurfaceData createData(WLComponentPeer peer,
-                                                     Image image,
-                                                     int type)
-    {
+    public static WLVKWindowSurfaceData createData(WLComponentPeer peer) {
         WLVKGraphicsConfig gc = getGC(peer);
-        Rectangle r = peer.getVisibleBounds();
-            return new WLVKOffScreenSurfaceData(peer, gc, r.width, r.height,
-                                               image, peer.getColorModel(),
-                                               type);
-    }
-
-    /**
-     * Creates a SurfaceData object representing an off-screen buffer (either
-     * a FBO or Texture).
-     */
-    public static WLVKOffScreenSurfaceData createData(WLVKGraphicsConfig gc,
-                                                     int width, int height,
-                                                     ColorModel cm,
-                                                     Image image, int type)
-    {
-        return new WLVKOffScreenSurfaceData(null, gc, width, height,
-                                           image, cm, type);
+        return new WLVKWindowSurfaceData(peer, gc);
     }
 
     public static WLVKGraphicsConfig getGC(WLComponentPeer peer) {
@@ -101,12 +95,9 @@ public abstract class WLVKSurfaceData extends VKSurfaceData {
     }
 
     public static class WLVKWindowSurfaceData extends WLVKSurfaceData {
-        protected final int scale;
-
         public WLVKWindowSurfaceData(WLComponentPeer peer, WLVKGraphicsConfig gc)
         {
-            super(peer, gc, peer.getColorModel(), WINDOW);
-            scale = 1;
+            super(peer, gc, gc.getSurfaceType(), peer.getColorModel(), WINDOW);
         }
 
         public SurfaceData getReplacement() {
@@ -151,70 +142,6 @@ public abstract class WLVKSurfaceData extends VKSurfaceData {
         @Override
         public boolean isOnScreen() {
             return true;
-        }
-    }
-
-    public static class WLVKOffScreenSurfaceData extends WLVKSurfaceData {
-
-        private Image offscreenImage;
-        private int width, height;
-        private final int scale;
-
-        public WLVKOffScreenSurfaceData(WLComponentPeer peer,
-                                       WLVKGraphicsConfig gc,
-                                       int width, int height,
-                                       Image image, ColorModel cm,
-                                       int type)
-        {
-            super(peer, gc, cm, type);
-
-            scale = 1;
-            this.width = width * scale;
-            this.height = height * scale;
-            offscreenImage = image;
-        }
-
-        public SurfaceData getReplacement() {
-            return restoreContents(offscreenImage);
-        }
-
-        @Override
-        public long getNativeResource(int resType) {
-            return 0;
-        }
-
-        public Rectangle getBounds() {
-            if (type == FLIP_BACKBUFFER) {
-                Rectangle r = peer.getVisibleBounds();
-                r.x = r.y = 0;
-                r.width = (int) Math.ceil(r.width * scale);
-                r.height = (int) Math.ceil(r.height * scale);
-                return r;
-            } else {
-                return new Rectangle(width, height);
-            }
-        }
-
-        /**
-         * Returns destination Image associated with this SurfaceData.
-         */
-        public Object getDestination() {
-            return offscreenImage;
-        }
-
-        @Override
-        public double getDefaultScaleX() {
-            return scale;
-        }
-
-        @Override
-        public double getDefaultScaleY() {
-            return scale;
-        }
-
-        @Override
-        public BufferedContext getContext() {
-            return graphicsConfig.getContext();
         }
     }
 }

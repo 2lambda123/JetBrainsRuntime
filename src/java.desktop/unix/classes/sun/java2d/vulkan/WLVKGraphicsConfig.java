@@ -48,10 +48,11 @@ import java.awt.image.DirectColorModel;
 import java.awt.image.VolatileImage;
 import java.awt.image.WritableRaster;
 import sun.awt.image.SunVolatileImage;
+import sun.awt.wl.WLComponentPeer;
 import sun.awt.wl.WLGraphicsConfig;
 import sun.awt.wl.WLGraphicsDevice;
 import sun.java2d.Surface;
-import sun.java2d.opengl.GLXGraphicsConfig;
+import sun.java2d.SurfaceData;
 import sun.java2d.pipe.hw.AccelGraphicsConfig;
 import sun.java2d.pipe.hw.AccelSurface;
 import sun.java2d.pipe.hw.AccelTypedVolatileImage;
@@ -206,6 +207,11 @@ public final class WLVKGraphicsConfig extends WLGraphicsConfig
         }
 
         return vi;
+    }
+
+    @Override
+    public SurfaceData createSurfaceData(WLComponentPeer peer) {
+        return WLVKSurfaceData.createData(peer);
     }
 
     /**
